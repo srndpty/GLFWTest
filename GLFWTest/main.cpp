@@ -13,6 +13,11 @@
 static constexpr float PI = 3.14159265f;
 
 // structs
+struct Extent
+{
+	float x, y, width, height;
+};
+
 struct KeyState
 {
 	bool pressed;
@@ -44,18 +49,6 @@ struct Vertex
 	float r, g, b;
 };
 
-Vertex vertices[3] =
-{
-	{ -0.3f, -0.2f, 1.f, 0.f, 0.f },
-	{  0.3f, -0.2f, 0.f, 1.f, 0.f },
-	{  0.0f,  0.3f, 0.f, 0.f, 1.f },
-};
-Vertex vertices2[3] =
-{
-	{ -0.3f, -0.2f, 1.f, 0.f, 0.f },
-	{ 0.3f, -0.2f, 0.f, 1.f, 0.f },
-	{ 0.0f,  0.3f, 0.f, 0.f, 1.f },
-};
 Vertex sqVerts[4] =
 {
 	{ -0.1f, +0.1f, 0.f, 1.f, 1.f },
@@ -65,6 +58,7 @@ Vertex sqVerts[4] =
 };
 static constexpr float BAR_THICKNESS = 0.1f;
 static constexpr float BAR_HEIGHT = 0.5f;
+static constexpr float BAR_LIMIT = 1.0f - BAR_HEIGHT / 2;
 Vertex bar[4] =
 {
 	{ -BAR_THICKNESS / 2, +BAR_HEIGHT / 2, 0.f, 1.f, 1.f },
@@ -78,15 +72,15 @@ const int CIRCLE_VERTEX_COUNT = CIRCLE_VERTEX_DIVISION + 2; // íÜêSÇ∆ç≈å„ÇÃèdï°ì
 Vertex circleVerts[CIRCLE_VERTEX_COUNT];
 GLFWwindow* window;
 
-
 static constexpr float BALL_SPEED = 0.02f;
-static constexpr float BALL_SIZE = 0.1f;
-static constexpr float BALL_LIMIT = 1.0f - BALL_SIZE;
+static constexpr float BALL_RADIUS = 0.1f;
+static constexpr float BALL_LIMIT = 1.0f - BALL_RADIUS;
+static constexpr float X_LIMIT = 1.4f;
 static constexpr float SPEED = 0.02f;
 static constexpr float START_DIR = 2 * PI * 0.7f;
-vec3 offset;
-vec3 offset2;
-vec3 ballPos;
+Extent bar0;
+Extent bar1;
+Extent ball;
 vec2 dir{ cos(START_DIR), sin(START_DIR) };
 
 // shader
@@ -123,19 +117,15 @@ float GetColorValue(int index, int maxCount, int offset)
 // í∏ì_ç¿ïWÇÃê›íË
 void SetVertices()
 {
-	const float size = 0.1f;
-	for (size_t i = 0; i < 3; i++)
-	{
-		vertices[i].x = cos(PI * 2 / 3 * (i % 3)) * size;
-		vertices[i].y = sin(PI * 2 / 3 * (i % 3)) * size;
-	}
-	for (size_t i = 0; i < 3; i++)
-	{
-		vertices2[i].x = cos(PI * 2 / 3 * (i % 3)) * size + 0;
-		vertices2[i].y = sin(PI * 2 / 3 * (i % 3)) * size;
-	}
+	// bar 
+	bar0.width  = BAR_THICKNESS;
+	bar0.height = BAR_HEIGHT;
+	bar1.width  = BAR_THICKNESS;
+	bar1.height = BAR_HEIGHT;
 
 	// circle
+	ball.x = ball.y = 0;
+	ball.width = ball.height = BALL_RADIUS * 2;
 	circleVerts[0].x = 0;
 	circleVerts[0].y = 0;
 	circleVerts[0].r = 1.0f;
@@ -143,8 +133,8 @@ void SetVertices()
 	circleVerts[0].b = 1.0f;
 	for (int i = 0; i <= CIRCLE_VERTEX_DIVISION; i++)
 	{
-		circleVerts[i + 1].x = cos(PI * 2 / CIRCLE_VERTEX_DIVISION * i) * BALL_SIZE;
-		circleVerts[i + 1].y = sin(PI * 2 / CIRCLE_VERTEX_DIVISION * i) * BALL_SIZE;
+		circleVerts[i + 1].x = cos(PI * 2 / CIRCLE_VERTEX_DIVISION * i) * BALL_RADIUS;
+		circleVerts[i + 1].y = sin(PI * 2 / CIRCLE_VERTEX_DIVISION * i) * BALL_RADIUS;
 		circleVerts[i + 1].r = GetColorValue(i, CIRCLE_VERTEX_DIVISION, CIRCLE_VERTEX_DIVISION / 3 * 0);
 		circleVerts[i + 1].g = GetColorValue(i, CIRCLE_VERTEX_DIVISION, CIRCLE_VERTEX_DIVISION / 3 * 1);
 		circleVerts[i + 1].b = GetColorValue(i, CIRCLE_VERTEX_DIVISION, CIRCLE_VERTEX_DIVISION / 3 * 2);
@@ -171,31 +161,50 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
 	}
 }
 
+// ç∂â∫äÓèÄ
+bool IsCollidingSqSq(const Extent& a, const Extent& b)
+{
+	if (a.x - a.width / 2 > b.x - b.width / 2 - a.width)
+	{
+		if (a.x - a.width / 2 < b.x + b.width / 2)
+		{
+			if (a.y - a.height / 2 > b.y - b.height / 2 - a.height)
+			{
+				if (a.y - a.height / 2 < b.y + b.height / 2)
+				{
+					return true;
+				}
+			}
+		}
+	}
+
+	return false;
+}
+
 // ì¸óÕÉ}ÉCÉtÉåÅ[ÉÄêßå‰
 void ProcessInputs()
 {
-	static constexpr float BAR_LIMIT = 1.0f - BAR_HEIGHT / 2;
 	// ç∂
 	if (input.mKeyStates[GLFW_KEY_W].pressed)
 	{
-		offset[1] += SPEED;
+		bar0.y += SPEED;
 	}
 	else if (input.mKeyStates[GLFW_KEY_S].pressed)
 	{
-		offset[1] -= SPEED;
+		bar0.y -= SPEED;
 	}
-	offset[1] = max(-BAR_LIMIT, min(offset[1], BAR_LIMIT));
+	bar0.y = max(-BAR_LIMIT, min(bar0.y, BAR_LIMIT));
 
 	// âE
 	if (input.mKeyStates[GLFW_KEY_UP].pressed)
 	{
-		offset2[1] += SPEED;
+		bar1.y += SPEED;
 	}
 	else if (input.mKeyStates[GLFW_KEY_DOWN].pressed)
 	{
-		offset2[1] -= SPEED;
+		bar1.y -= SPEED;
 	}
-	offset2[1] = max(-BAR_LIMIT, min(offset2[1], BAR_LIMIT));
+	bar1.y = max(-BAR_LIMIT, min(bar1.y, BAR_LIMIT));
 
 	// èIóπ
 	if (input.mKeyStates[GLFW_KEY_ESCAPE].pressed)
@@ -204,31 +213,42 @@ void ProcessInputs()
 	}
 }
 
-void UpdateCircle()
+void UpdateBall()
 {
-	// îΩéÀ
-	if (ballPos[0] < -BALL_LIMIT)
+	// ÉoÅ[Ç…ìñÇΩÇ¡ÇΩÇÁîΩéÀ
+	if (IsCollidingSqSq(ball, bar0) && ball.x > bar0.x)
 	{
 		dir[0] *= -1;
+		ball.x = bar0.x + bar0.width / 2 + ball.width / 2;
 	}
-	else if (ballPos[0] > BALL_LIMIT)
+	else if (IsCollidingSqSq(ball, bar1) && ball.x < bar1.x)
 	{
 		dir[0] *= -1;
-	}
-	else if (ballPos[1] < -BALL_LIMIT)
-	{
-		dir[1] *= -1;
-	}
-	else if (ballPos[1] > BALL_LIMIT)
-	{
-		dir[1] *= -1;
+		ball.x = bar1.x - bar0.width / 2 - ball.width / 2;
 	}
 
-	
+
+	// îΩéÀ
+	else if (ball.x < -X_LIMIT)
+	{
+		dir[0] *= -1;
+	}
+	else if (ball.x > X_LIMIT)
+	{
+		dir[0] *= -1;
+	}
+	else if (ball.y < -BALL_LIMIT)
+	{
+		dir[1] *= -1;
+	}
+	else if (ball.y > BALL_LIMIT)
+	{
+		dir[1] *= -1;
+	}
 
 	// à⁄ìÆ
-	ballPos[0] += dir[0] * BALL_SPEED;
-	ballPos[1] += dir[1] * BALL_SPEED;
+	ball.x += dir[0] * BALL_SPEED;
+	ball.y += dir[1] * BALL_SPEED;
 }
 
 // ENTRY POINT
@@ -296,14 +316,14 @@ int main()
 
 	glUseProgram(program);
 
-	offset[0] = -1.0f;
-	offset2[0] = +1.0f;
+	bar0.x = -1.0f;
+	bar1.x = +1.0f;
 
 	// main loop
 	while (!glfwWindowShouldClose(window))
 	{
 		ProcessInputs();
-		UpdateCircle();
+		UpdateBall();
 
 		float ratio;
 		int width, height;
@@ -326,7 +346,7 @@ int main()
 		glVertexAttribPointer(vcolLocation, 3, GL_FLOAT, GL_FALSE, sizeof(float) * 5, (void*)(sizeof(float) * 2));
 
 		mat4x4_identity(m);
-		mat4x4_translate_in_place(m, offset[0], offset[1], offset[2]);
+		mat4x4_translate_in_place(m, bar0.x, bar0.y, 0);
 		//mat4x4_rotate_Z(m, m, (float)glfwGetTime());
 		mat4x4_ortho(p, -ratio, ratio, -1.f, 1.f, 1.f, -1.f);
 		mat4x4_mul(mvp, p, m);
@@ -339,7 +359,7 @@ int main()
 		glBufferData(GL_ARRAY_BUFFER, sizeof(bar), bar, GL_DYNAMIC_DRAW);
 
 		mat4x4_identity(m);
-		mat4x4_translate_in_place(m, offset2[0], offset2[1], offset2[2]);
+		mat4x4_translate_in_place(m, bar1.x, bar1.y, 0);
 		//mat4x4_rotate_Z(m, m, (float)glfwGetTime());
 		mat4x4_ortho(p, -ratio, ratio, -1.f, 1.f, 1.f, -1.f);
 		mat4x4_mul(mvp, p, m);
@@ -358,7 +378,7 @@ int main()
 		glBufferData(GL_ARRAY_BUFFER, sizeof(circleVerts), circleVerts, GL_DYNAMIC_DRAW);
 
 		mat4x4_identity(m);
-		mat4x4_translate_in_place(m, ballPos[0], ballPos[1], ballPos[2]);
+		mat4x4_translate_in_place(m, ball.x, ball.y, 0);
 		mat4x4_rotate_Z(m, m, (float)glfwGetTime() * 2);
 		mat4x4_ortho(p, -ratio, ratio, -1.f, 1.f, 1.f, -1.f);
 		mat4x4_mul(mvp, p, m);
