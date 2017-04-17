@@ -82,6 +82,8 @@ Extent bar0;
 Extent bar1;
 Extent ball;
 vec2 dir{ cos(START_DIR), sin(START_DIR) };
+int scores[2];
+
 
 // shader
 static const char* VERTEX_SHADER_TEXT =
@@ -216,15 +218,29 @@ void ProcessInputs()
 void UpdateBall()
 {
 	// バーに当たったら反射
-	if (IsCollidingSqSq(ball, bar0) && ball.x > bar0.x)
+	if (IsCollidingSqSq(ball, bar0))
 	{
-		dir[0] *= -1;
-		ball.x = bar0.x + bar0.width / 2 + ball.width / 2;
+		if (ball.x > bar0.x)
+		{
+			dir[0] *= -1;
+			ball.x = bar0.x + bar0.width / 2 + ball.width / 2;
+		}
+		else
+		{
+			ball.x = bar0.x - bar0.width / 2 - ball.width / 2;
+		}
 	}
-	else if (IsCollidingSqSq(ball, bar1) && ball.x < bar1.x)
+	if (IsCollidingSqSq(ball, bar1))
 	{
-		dir[0] *= -1;
-		ball.x = bar1.x - bar0.width / 2 - ball.width / 2;
+		if (ball.x < bar1.x)
+		{
+			dir[0] *= -1;
+			ball.x = bar1.x - bar1.width / 2 - ball.width / 2;
+		}
+		else
+		{
+			ball.x = bar1.x + bar1.width / 2 + ball.width / 2;
+		}
 	}
 
 
@@ -251,9 +267,15 @@ void UpdateBall()
 	ball.y += dir[1] * BALL_SPEED;
 
 	// 両端に行ってたら真ん中からリスポーン
-	if (ball.x > X_LIMIT || ball.x < -X_LIMIT)
+	if (ball.x > X_LIMIT)
 	{
 		ball.x = ball.y = 0;
+		++scores[0];
+	}
+	if (ball.x < -X_LIMIT)
+	{
+		ball.x = ball.y = 0;
+		++scores[1];
 	}
 }
 
