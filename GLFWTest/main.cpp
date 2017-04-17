@@ -62,8 +62,8 @@ Vertex sqVerts[4] =
 	{ +0.1f, -0.1f, 1.f, 0.f, 0.f },
 	{ -0.1f, -0.1f, 1.f, 1.f, 0.f },
 };
-static const float BAR_THICKNESS = 0.1f;
-static const float BAR_HEIGHT = 0.5f;
+static constexpr float BAR_THICKNESS = 0.1f;
+static constexpr float BAR_HEIGHT = 0.5f;
 Vertex bar[4] =
 {
 	{ -BAR_THICKNESS / 2, +BAR_HEIGHT / 2, 0.f, 1.f, 1.f },
@@ -82,6 +82,7 @@ static const float SPEED = 0.02f;
 vec3 offset;
 vec3 offset2;
 
+// shader
 static const char* VERTEX_SHADER_TEXT =
 R"delimiter(
 uniform mat4 MVP;
@@ -106,11 +107,13 @@ void main()
 }
 )delimiter";
 
+// インデックスに応じて色用の値を取得
 float GetColorValue(int index, int maxCount, int offset)
 {
 	return max((fabs((((index + offset) % maxCount) * 2.0f / maxCount) - 1.0f) * 3.0f) - 1.0f, 0);
 }
 
+// 頂点座標の設定
 void SetVertices()
 {
 	const float size = 0.1f;
@@ -132,7 +135,7 @@ void SetVertices()
 	circleVerts[0].r = 1.0f;
 	circleVerts[0].g = 1.0f;
 	circleVerts[0].b = 1.0f;
-	for (size_t i = 0; i <= CIRCLE_VERTEX_DIVISION; i++)
+	for (int i = 0; i <= CIRCLE_VERTEX_DIVISION; i++)
 	{
 		circleVerts[i + 1].x = cos(PI * 2 / CIRCLE_VERTEX_DIVISION * i) * CIRCLE_SIZE;
 		circleVerts[i + 1].y = sin(PI * 2 / CIRCLE_VERTEX_DIVISION * i) * CIRCLE_SIZE;
@@ -142,11 +145,13 @@ void SetVertices()
 	}
 }
 
+// エラーコールバック
 void ErrorCallback(int error, const char* description)
 {
 	std::cerr << "Error Occured code: " << error << " desc: " << description << "\n";
 }
 
+// 入力コールバック
 void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mods)
 {
 	input.Update();
@@ -160,8 +165,10 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
 	}
 }
 
+// 入力マイフレーム制御
 void ProcessInputs()
 {
+	static constexpr float BAR_LIMIT = 1.0f - BAR_HEIGHT / 2;
 	// 左
 	if (input.mKeyStates[GLFW_KEY_W].pressed)
 	{
@@ -171,6 +178,7 @@ void ProcessInputs()
 	{
 		offset[1] -= SPEED;
 	}
+	offset[1] = max(-BAR_LIMIT, min(offset[1], BAR_LIMIT));
 
 	// 右
 	if (input.mKeyStates[GLFW_KEY_UP].pressed)
@@ -181,6 +189,7 @@ void ProcessInputs()
 	{
 		offset2[1] -= SPEED;
 	}
+	offset2[1] = max(-BAR_LIMIT, min(offset2[1], BAR_LIMIT));
 
 	// 終了
 	if (input.mKeyStates[GLFW_KEY_ESCAPE].pressed)
@@ -189,6 +198,7 @@ void ProcessInputs()
 	}
 }
 
+// ENTRY POINT
 int main()
 {
 	static const int VERTEX_BUFFER_COUNT = 4;
@@ -272,7 +282,7 @@ int main()
 		glClear(GL_COLOR_BUFFER_BIT);
 		glClearColor(0.5f, 0.5f, 0.5f, 1);
 
-		// 1 triangle wsad
+		// 1 left bar wsad
 		glBindBuffer(GL_ARRAY_BUFFER, vertexBuffers[0]);
 		glBufferData(GL_ARRAY_BUFFER, sizeof(bar), bar, GL_DYNAMIC_DRAW);
 
@@ -290,7 +300,7 @@ int main()
 		glUniformMatrix4fv(mvpLocation, 1, false, (const GLfloat*)mvp);
 		glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
 
-		// 2 triangle arrows
+		// 2 right bar arrows
 		glBindBuffer(GL_ARRAY_BUFFER, vertexBuffers[1]);
 		glBufferData(GL_ARRAY_BUFFER, sizeof(bar), bar, GL_DYNAMIC_DRAW);
 
@@ -308,31 +318,6 @@ int main()
 		glUseProgram(program);
 		glUniformMatrix4fv(mvpLocation, 1, false, (const GLfloat*)mvp);
 		glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
-
-		// 3 quads
-		//glBindBuffer(GL_ARRAY_BUFFER, vertexBuffers[2]);
-		//glBufferData(GL_ARRAY_BUFFER, sizeof(sqVerts), sqVerts, GL_DYNAMIC_DRAW);
-
-		//glEnableVertexAttribArray(vposLocation);
-		//glVertexAttribPointer(vposLocation, 2, GL_FLOAT, GL_FALSE, sizeof(float) * 5, (void*)(0));
-		//glEnableVertexAttribArray(vcolLocation);
-		//glVertexAttribPointer(vcolLocation, 3, GL_FLOAT, GL_FALSE, sizeof(float) * 5, (void*)(sizeof(float) * 2));
-
-		//for (size_t i = 0; i < 5; i++)
-		//{
-		//	for (size_t j = 0; j < 5; j++)
-		//	{
-		//		mat4x4_identity(m);
-		//		mat4x4_translate_in_place(m, -0.5f + 0.2f * i, -0.5f + 0.2f * j, 0);
-		//		//mat4x4_rotate_Z(m, m, (float)glfwGetTime());
-		//		mat4x4_ortho(p, -ratio, ratio, -1.f, 1.f, 1.f, -1.f);
-		//		mat4x4_mul(mvp, p, m);
-
-		//		//glUseProgram(program);
-		//		glUniformMatrix4fv(mvpLocation, 1, false, (const GLfloat*)mvp);
-		//		glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
-		//	}
-		//}
 
 		// 4 circle
 		glBindBuffer(GL_ARRAY_BUFFER, vertexBuffers[3]);
