@@ -249,6 +249,12 @@ void UpdateBall()
 	// 移動
 	ball.x += dir[0] * BALL_SPEED;
 	ball.y += dir[1] * BALL_SPEED;
+
+	// 両端に行ってたら真ん中からリスポーン
+	if (ball.x > X_LIMIT || ball.x < -X_LIMIT)
+	{
+		ball.x = ball.y = 0;
+	}
 }
 
 // ENTRY POINT
