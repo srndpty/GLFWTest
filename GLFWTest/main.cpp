@@ -5,6 +5,7 @@
 #include <GLFW/glfw3.h>
 
 #include "linmath.h"
+#include <complex>
 
 // this line below prevents console window to pop up
 //#pragma comment(linker, "/subsystem:\"windows\" /entry:\"mainCRTStartup\" ")
@@ -78,9 +79,15 @@ Vertex circleVerts[CIRCLE_VERTEX_COUNT];
 GLFWwindow* window;
 
 
-static const float SPEED = 0.02f;
+static constexpr float BALL_SPEED = 0.02f;
+static constexpr float BALL_SIZE = 0.1f;
+static constexpr float BALL_LIMIT = 1.0f - BALL_SIZE;
+static constexpr float SPEED = 0.02f;
+static constexpr float START_DIR = 2 * PI * 0.7f;
 vec3 offset;
 vec3 offset2;
+vec3 ballPos;
+vec2 dir{ cos(START_DIR), sin(START_DIR) };
 
 // shader
 static const char* VERTEX_SHADER_TEXT =
@@ -129,7 +136,6 @@ void SetVertices()
 	}
 
 	// circle
-	static const float CIRCLE_SIZE = 0.3f;
 	circleVerts[0].x = 0;
 	circleVerts[0].y = 0;
 	circleVerts[0].r = 1.0f;
@@ -137,8 +143,8 @@ void SetVertices()
 	circleVerts[0].b = 1.0f;
 	for (int i = 0; i <= CIRCLE_VERTEX_DIVISION; i++)
 	{
-		circleVerts[i + 1].x = cos(PI * 2 / CIRCLE_VERTEX_DIVISION * i) * CIRCLE_SIZE;
-		circleVerts[i + 1].y = sin(PI * 2 / CIRCLE_VERTEX_DIVISION * i) * CIRCLE_SIZE;
+		circleVerts[i + 1].x = cos(PI * 2 / CIRCLE_VERTEX_DIVISION * i) * BALL_SIZE;
+		circleVerts[i + 1].y = sin(PI * 2 / CIRCLE_VERTEX_DIVISION * i) * BALL_SIZE;
 		circleVerts[i + 1].r = GetColorValue(i, CIRCLE_VERTEX_DIVISION, CIRCLE_VERTEX_DIVISION / 3 * 0);
 		circleVerts[i + 1].g = GetColorValue(i, CIRCLE_VERTEX_DIVISION, CIRCLE_VERTEX_DIVISION / 3 * 1);
 		circleVerts[i + 1].b = GetColorValue(i, CIRCLE_VERTEX_DIVISION, CIRCLE_VERTEX_DIVISION / 3 * 2);
@@ -196,6 +202,33 @@ void ProcessInputs()
 	{
 		glfwSetWindowShouldClose(window, true);
 	}
+}
+
+void UpdateCircle()
+{
+	// ”½ŽË
+	if (ballPos[0] < -BALL_LIMIT)
+	{
+		dir[0] *= -1;
+	}
+	else if (ballPos[0] > BALL_LIMIT)
+	{
+		dir[0] *= -1;
+	}
+	else if (ballPos[1] < -BALL_LIMIT)
+	{
+		dir[1] *= -1;
+	}
+	else if (ballPos[1] > BALL_LIMIT)
+	{
+		dir[1] *= -1;
+	}
+
+	
+
+	// ˆÚ“®
+	ballPos[0] += dir[0] * BALL_SPEED;
+	ballPos[1] += dir[1] * BALL_SPEED;
 }
 
 // ENTRY POINT
@@ -270,6 +303,7 @@ int main()
 	while (!glfwWindowShouldClose(window))
 	{
 		ProcessInputs();
+		UpdateCircle();
 
 		float ratio;
 		int width, height;
@@ -324,8 +358,8 @@ int main()
 		glBufferData(GL_ARRAY_BUFFER, sizeof(circleVerts), circleVerts, GL_DYNAMIC_DRAW);
 
 		mat4x4_identity(m);
-		mat4x4_translate_in_place(m, 0, 0, -1);
-		//mat4x4_rotate_Z(m, m, (float)glfwGetTime());
+		mat4x4_translate_in_place(m, ballPos[0], ballPos[1], ballPos[2]);
+		mat4x4_rotate_Z(m, m, (float)glfwGetTime() * 2);
 		mat4x4_ortho(p, -ratio, ratio, -1.f, 1.f, 1.f, -1.f);
 		mat4x4_mul(mvp, p, m);
 
