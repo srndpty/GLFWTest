@@ -1,11 +1,13 @@
 // includes
 #include <iostream>
 #include "glad/glad.h"
-
+#define STB_IMAGE_IMPLEMENTATION
+#include "stb_image.h"
 #include <GLFW/glfw3.h>
 
 #include "linmath.h"
 #include <complex>
+
 
 // this line below prevents console window to pop up
 //#pragma comment(linker, "/subsystem:\"windows\" /entry:\"mainCRTStartup\" ")
@@ -279,6 +281,35 @@ void UpdateBall()
 	}
 }
 
+GLuint LoadTexture(const char* path)
+{
+	int width, height, comp;
+	unsigned char* image = stbi_load(path, &width, &height, &comp, STBI_rgb_alpha);
+	if (image == nullptr)
+	{
+		std::cerr << "failed to load image\n";
+		return -1;
+	}
+
+	GLuint texID;
+	glGenTextures(1, &texID);
+	glBindTexture(GL_TEXTURE_2D, texID);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+
+	if (comp == 3)
+	{
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, image);
+	}
+	else if (comp == 4)
+	{
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, image);
+	}
+
+
+	return texID;
+}
+
 // ENTRY POINT
 int main()
 {
@@ -286,6 +317,7 @@ int main()
 	GLuint vertexBuffers[VERTEX_BUFFER_COUNT];
 	GLuint vertexShader, fragmentShader, program;
 	GLint mvpLocation, vposLocation, vcolLocation;
+
 
 	if (!glfwInit())
 	{
@@ -350,6 +382,7 @@ int main()
 	// main loop
 	while (!glfwWindowShouldClose(window))
 	{
+		//LoadTexture("num.png");
 		ProcessInputs();
 		UpdateBall();
 
