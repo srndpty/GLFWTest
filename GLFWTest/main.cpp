@@ -1,4 +1,5 @@
 // includes
+#define _CRT_SECURE_NO_WARNINGS
 #include <iostream>
 #include "glad/glad.h"
 #define STB_IMAGE_IMPLEMENTATION
@@ -42,8 +43,9 @@ public:
 public:
 	KeyState mKeyStates[KEY_MAX];
 };
-Input input;
+static Input input;
 
+GLuint texId;
 
 struct Vertex
 {
@@ -111,6 +113,9 @@ void main()
 	gl_FragColor = vec4(color, 1.0);
 }
 )delimiter";
+
+GLuint loadBMP_custom(const char * imagepath);
+
 
 // インデックスに応じて色用の値を取得
 float GetColorValue(int index, int maxCount, int offset)
@@ -310,8 +315,110 @@ GLuint LoadTexture(const char* path)
 	return texID;
 }
 
+GLuint InitTexture(const char* path)
+{
+	glGenTextures(1, &texId);
+
+	static const int TEXHEIGHT = 128;
+	static const int TEXWIDTH = 128;
+	/* テクスチャの読み込みに使う配列 */
+	GLubyte texture[TEXHEIGHT * TEXWIDTH * 3];
+	FILE *fp;
+
+	/* テクスチャ画像の読み込み */
+	if ((fp = fopen(path, "rb")) != NULL)
+	{
+		fread(texture, sizeof texture, 1, fp);
+		fclose(fp);
+	}
+	else
+	{
+		perror(path);
+	}
+
+	/* テクスチャ画像はバイト単位に詰め込まれている */
+	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+
+	/* テクスチャの割り当て */
+	glBindTexture(GL_TEXTURE_2D, texId);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, TEXWIDTH, TEXHEIGHT, 0, GL_RGB, GL_UNSIGNED_BYTE, texture);
+
+	/* テクスチャを拡大・縮小する方法の指定 */
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+
+	/* 初期設定 */
+	glClearColor(0.3, 0.3, 1.0, 0.0);
+	glEnable(GL_DEPTH_TEST);
+	glDisable(GL_CULL_FACE);
+
+	/* 光源の初期設定 */
+	glEnable(GL_LIGHTING);
+	glEnable(GL_LIGHT0);
+	//glLightfv(GL_LIGHT0, GL_DIFFUSE, lightcol);
+	//glLightfv(GL_LIGHT0, GL_SPECULAR, lightcol);
+	//glLightfv(GL_LIGHT0, GL_AMBIENT, lightamb);
+
+	return texId;
+}
+
+void Scene()
+{
+	static const GLfloat color[] = { 1.0, 1.0, 1.0, 1.0 };  /* 材質 (色) */
+	glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, color);/* 材質の設定 */
+	static const GLfloat vtx[] = {
+		0, 0,
+		0, 1,
+		1, 0,
+		1, 1,
+	};
+	glVertexPointer(2, GL_FLOAT, 0, vtx);
+
+	// Step5. テクスチャの領域指定
+	static const GLfloat texuv[] = {
+		0.0f, 1.0f,
+		1.0f, 1.0f,
+		1.0f, 0.0f,
+		0.0f, 0.0f,
+	};
+	glTexCoordPointer(2, GL_FLOAT, 0, texuv);
+
+	// Step6. テクスチャの画像指定
+	glBindTexture(GL_TEXTURE_2D, texId);
+
+	// Step7. テクスチャの描画
+	glEnable(GL_TEXTURE_2D);
+	glEnableClientState(GL_VERTEX_ARRAY);
+	glEnableClientState(GL_TEXTURE_COORD_ARRAY);
+	glDrawArrays(GL_QUADS, 0, 4);
+	glDisableClientState(GL_TEXTURE_COORD_ARRAY);
+	glDisableClientState(GL_VERTEX_ARRAY);
+	glDisable(GL_TEXTURE_2D);
+
+	return;
+
+	/* テクスチャマッピング開始 */
+	glEnable(GL_TEXTURE_2D);
+
+	/* １枚の４角形を描く */
+	glNormal3d(0.0, 0.0, 1.0);
+	glBegin(GL_QUADS);
+	glTexCoord2d(0.0, 1.0);
+	glVertex3d(-1.0, -1.0, 0.0);
+	glTexCoord2d(1.0, 1.0);
+	glVertex3d(1.0, -1.0, 0.0);
+	glTexCoord2d(1.0, 0.0);
+	glVertex3d(1.0, 1.0, 0.0);
+	glTexCoord2d(0.0, 0.0);
+	glVertex3d(-1.0, 1.0, 0.0);
+	glEnd();
+
+	/* テクスチャマッピング終了 */
+	glDisable(GL_TEXTURE_2D);
+}
+
 // ENTRY POINT
-int main()
+int main_()
 {
 	static const int VERTEX_BUFFER_COUNT = 4;
 	GLuint vertexBuffers[VERTEX_BUFFER_COUNT];
@@ -379,79 +486,85 @@ int main()
 	bar0.x = -1.0f;
 	bar1.x = +1.0f;
 
+	//GLuint image = loadBMP_custom("test.bmp");
+	InitTexture(R"(C:\Users\Freis\Desktop\GLFWTest\x64\Debug\cat.raw)");
+
 	// main loop
 	while (!glfwWindowShouldClose(window))
 	{
+		Scene();
 		//LoadTexture("num.png");
-		ProcessInputs();
-		UpdateBall();
+		if(false)
+		{
+			ProcessInputs();
+			UpdateBall();
 
-		float ratio;
-		int width, height;
-		mat4x4 m, p, mvp;
+			float ratio;
+			int width, height;
+			mat4x4 m, p, mvp;
 
-		glfwGetFramebufferSize(window, &width, &height);
-		ratio = static_cast<float>(width) / height;
+			glfwGetFramebufferSize(window, &width, &height);
+			ratio = static_cast<float>(width) / height;
 
-		glViewport(0, 0, width, height);
-		glClear(GL_COLOR_BUFFER_BIT);
-		glClearColor(0.5f, 0.5f, 0.5f, 1);
+			glViewport(0, 0, width, height);
+			glClear(GL_COLOR_BUFFER_BIT);
+			glClearColor(0.5f, 0.5f, 0.5f, 1);
 
-		// 1 left bar wsad
-		glBindBuffer(GL_ARRAY_BUFFER, vertexBuffers[0]);
-		glBufferData(GL_ARRAY_BUFFER, sizeof(bar), bar, GL_DYNAMIC_DRAW);
+			// 1 left bar wsad
+			glBindBuffer(GL_ARRAY_BUFFER, vertexBuffers[0]);
+			glBufferData(GL_ARRAY_BUFFER, sizeof(bar), bar, GL_DYNAMIC_DRAW);
 
-		glEnableVertexAttribArray(vposLocation);
-		glVertexAttribPointer(vposLocation, 2, GL_FLOAT, GL_FALSE, sizeof(float) * 5, (void*)(0));
-		glEnableVertexAttribArray(vcolLocation);
-		glVertexAttribPointer(vcolLocation, 3, GL_FLOAT, GL_FALSE, sizeof(float) * 5, (void*)(sizeof(float) * 2));
+			glEnableVertexAttribArray(vposLocation);
+			glVertexAttribPointer(vposLocation, 2, GL_FLOAT, GL_FALSE, sizeof(float) * 5, (void*)(0));
+			glEnableVertexAttribArray(vcolLocation);
+			glVertexAttribPointer(vcolLocation, 3, GL_FLOAT, GL_FALSE, sizeof(float) * 5, (void*)(sizeof(float) * 2));
 
-		mat4x4_identity(m);
-		mat4x4_translate_in_place(m, bar0.x, bar0.y, 0);
-		//mat4x4_rotate_Z(m, m, (float)glfwGetTime());
-		mat4x4_ortho(p, -ratio, ratio, -1.f, 1.f, 1.f, -1.f);
-		mat4x4_mul(mvp, p, m);
+			mat4x4_identity(m);
+			mat4x4_translate_in_place(m, bar0.x, bar0.y, 0);
+			//mat4x4_rotate_Z(m, m, (float)glfwGetTime());
+			mat4x4_ortho(p, -ratio, ratio, -1.f, 1.f, 1.f, -1.f);
+			mat4x4_mul(mvp, p, m);
 
-		glUniformMatrix4fv(mvpLocation, 1, false, (const GLfloat*)mvp);
-		glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
+			glUniformMatrix4fv(mvpLocation, 1, false, (const GLfloat*)mvp);
+			glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
 
-		// 2 right bar arrows
-		glBindBuffer(GL_ARRAY_BUFFER, vertexBuffers[1]);
-		glBufferData(GL_ARRAY_BUFFER, sizeof(bar), bar, GL_DYNAMIC_DRAW);
+			// 2 right bar arrows
+			glBindBuffer(GL_ARRAY_BUFFER, vertexBuffers[1]);
+			glBufferData(GL_ARRAY_BUFFER, sizeof(bar), bar, GL_DYNAMIC_DRAW);
 
-		mat4x4_identity(m);
-		mat4x4_translate_in_place(m, bar1.x, bar1.y, 0);
-		//mat4x4_rotate_Z(m, m, (float)glfwGetTime());
-		mat4x4_ortho(p, -ratio, ratio, -1.f, 1.f, 1.f, -1.f);
-		mat4x4_mul(mvp, p, m);
+			mat4x4_identity(m);
+			mat4x4_translate_in_place(m, bar1.x, bar1.y, 0);
+			//mat4x4_rotate_Z(m, m, (float)glfwGetTime());
+			mat4x4_ortho(p, -ratio, ratio, -1.f, 1.f, 1.f, -1.f);
+			mat4x4_mul(mvp, p, m);
 
-		glEnableVertexAttribArray(vposLocation);
-		glVertexAttribPointer(vposLocation, 2, GL_FLOAT, GL_FALSE, sizeof(float) * 5, (void*)(0));
-		glEnableVertexAttribArray(vcolLocation);
-		glVertexAttribPointer(vcolLocation, 3, GL_FLOAT, GL_FALSE, sizeof(float) * 5, (void*)(sizeof(float) * 2));
+			glEnableVertexAttribArray(vposLocation);
+			glVertexAttribPointer(vposLocation, 2, GL_FLOAT, GL_FALSE, sizeof(float) * 5, (void*)(0));
+			glEnableVertexAttribArray(vcolLocation);
+			glVertexAttribPointer(vcolLocation, 3, GL_FLOAT, GL_FALSE, sizeof(float) * 5, (void*)(sizeof(float) * 2));
 
-		glUseProgram(program);
-		glUniformMatrix4fv(mvpLocation, 1, false, (const GLfloat*)mvp);
-		glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
+			glUseProgram(program);
+			glUniformMatrix4fv(mvpLocation, 1, false, (const GLfloat*)mvp);
+			glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
 
-		// 4 circle
-		glBindBuffer(GL_ARRAY_BUFFER, vertexBuffers[3]);
-		glBufferData(GL_ARRAY_BUFFER, sizeof(circleVerts), circleVerts, GL_DYNAMIC_DRAW);
+			// 4 circle
+			glBindBuffer(GL_ARRAY_BUFFER, vertexBuffers[3]);
+			glBufferData(GL_ARRAY_BUFFER, sizeof(circleVerts), circleVerts, GL_DYNAMIC_DRAW);
 
-		mat4x4_identity(m);
-		mat4x4_translate_in_place(m, ball.x, ball.y, 0);
-		mat4x4_rotate_Z(m, m, (float)glfwGetTime() * 2);
-		mat4x4_ortho(p, -ratio, ratio, -1.f, 1.f, 1.f, -1.f);
-		mat4x4_mul(mvp, p, m);
+			mat4x4_identity(m);
+			mat4x4_translate_in_place(m, ball.x, ball.y, 0);
+			mat4x4_rotate_Z(m, m, (float)glfwGetTime() * 2);
+			mat4x4_ortho(p, -ratio, ratio, -1.f, 1.f, 1.f, -1.f);
+			mat4x4_mul(mvp, p, m);
 
-		glEnableVertexAttribArray(vposLocation);
-		glVertexAttribPointer(vposLocation, 2, GL_FLOAT, GL_FALSE, sizeof(float) * 5, (void*)(0));
-		glEnableVertexAttribArray(vcolLocation);
-		glVertexAttribPointer(vcolLocation, 3, GL_FLOAT, GL_FALSE, sizeof(float) * 5, (void*)(sizeof(float) * 2));
+			glEnableVertexAttribArray(vposLocation);
+			glVertexAttribPointer(vposLocation, 2, GL_FLOAT, GL_FALSE, sizeof(float) * 5, (void*)(0));
+			glEnableVertexAttribArray(vcolLocation);
+			glVertexAttribPointer(vcolLocation, 3, GL_FLOAT, GL_FALSE, sizeof(float) * 5, (void*)(sizeof(float) * 2));
 
-		glUniformMatrix4fv(mvpLocation, 1, false, (const GLfloat*)mvp);
-		glDrawArrays(GL_TRIANGLE_FAN, 0, CIRCLE_VERTEX_COUNT);
-
+			glUniformMatrix4fv(mvpLocation, 1, false, (const GLfloat*)mvp);
+			glDrawArrays(GL_TRIANGLE_FAN, 0, CIRCLE_VERTEX_COUNT);
+		}
 		// end
 		glfwSwapBuffers(window);
 		glfwPollEvents();
@@ -461,5 +574,67 @@ int main()
 	glfwTerminate();
 
 	return 0;
+}
+
+
+GLuint loadBMP_custom(const char * imagepath)
+{
+	// Data read from the header of the BMP file
+	unsigned char header[54]; // Each BMP file begins by a 54-bytes header
+	unsigned int dataPos;     // Position in the file where the actual data begins
+	unsigned int width, height;
+	unsigned int imageSize;   // = width*height*3
+							  // Actual RGB data
+	unsigned char * data;
+
+	// Open the file
+	FILE * file = fopen(imagepath, "rb");
+	if (!file) { printf("Image could not be opened\n"); return 0; }
+
+	if (fread(header, 1, 54, file) != 54)
+	{ // If not 54 bytes read : problem
+		printf("Not a correct BMP file\n");
+		return false;
+	}
+
+	if (header[0] != 'B' || header[1] != 'M')
+	{
+		printf("Not a correct BMP file\n");
+		return 0;
+	}
+
+	// Read ints from the byte array
+	dataPos = *(int*)&(header[0x0A]);
+	imageSize = *(int*)&(header[0x22]);
+	width = *(int*)&(header[0x12]);
+	height = *(int*)&(header[0x16]);
+
+	// Some BMP files are misformatted, guess missing information
+	if (imageSize == 0)    imageSize = width*height * 3; // 3 : one byte for each Red, Green and Blue component
+	if (dataPos == 0)      dataPos = 54; // The BMP header is done that way
+
+										 // Create a buffer
+	data = new unsigned char[imageSize];
+
+	// Read the actual data from the file into the buffer
+	fread(data, 1, imageSize, file);
+
+	//Everything is in memory now, the file can be closed
+	fclose(file);
+
+	// Create one OpenGL texture
+	GLuint textureID;
+	glGenTextures(1, &textureID);
+
+	// "Bind" the newly created texture : all future texture functions will modify this texture
+	glBindTexture(GL_TEXTURE_2D, textureID);
+
+	// Give the image to OpenGL
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_BGR, GL_UNSIGNED_BYTE, data);
+
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+
+	return textureID;
 }
 

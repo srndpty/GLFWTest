@@ -116,8 +116,10 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="anotherMain.cpp" />
     <ClCompile Include="glad.c" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="Shader.cpp" />
     <ClCompile Include="simple.c" />
   </ItemGroup>
   <ItemGroup>
@@ -131,6 +133,7 @@
     <ClInclude Include="GLFW\glfw3native.h" />
     <ClInclude Include="KHR\khrplatform.h" />
     <ClInclude Include="linmath.h" />
+    <ClInclude Include="Shader.h" />
     <ClInclude Include="stb_image.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
