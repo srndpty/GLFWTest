@@ -239,7 +239,7 @@ bool IsCollidingSqSq(Vec2 a[BAR_VERTS_COUNT], Vec2 b[BAR_VERTS_COUNT])
 	return false;
 }
 
-GLuint loadTexture(string filename)
+GLuint loadTexture(const char* filename)
 {
 	// テクスチャIDの生成
 	GLuint catId;
@@ -247,6 +247,12 @@ GLuint loadTexture(string filename)
 
 	// ファイルの読み込み
 	std::ifstream fstr(filename, std::ios::binary);
+	if (!fstr)
+	{
+		std::cout << "Failed to load " << filename << "\n";
+		return -1;
+	}
+
 	const size_t fileSize = static_cast<size_t>(fstr.seekg(0, fstr.end).tellg());
 	fstr.seekg(0, fstr.beg);
 	if (fileSize >= std::numeric_limits<size_t>::max())
@@ -298,10 +304,20 @@ void KeyCallback2(GLFWwindow* window, int key, int scancode, int action, int mod
 		glfwSetWindowShouldClose(window, true);
 	}
 }
-
+#include <direct.h>
+#define GetCurrentDir _getcwd
+std::string GetCurrentWorkingDir(void)
+{
+	char buff[FILENAME_MAX];
+	GetCurrentDir(buff, FILENAME_MAX);
+	std::string current_working_dir(buff);
+	return current_working_dir;
+}
 
 int main()
 {
+	std::cout << "current directory is " << GetCurrentWorkingDir().c_str() << "\n";
+
 	if (!glfwInit())
 	{
 		return -1;
@@ -328,8 +344,8 @@ int main()
 	//GLuint programId = CreateShader();
 	shader.SetUp();
 
-	GLuint catId = loadTexture(R"(C:\Users\Freis\Documents\Visual Studio 2015\Projects\GLFWTest\GLFWTest\cat.raw)");
-	GLuint dogId = loadTexture(R"(C:\Users\Freis\Documents\Visual Studio 2015\Projects\GLFWTest\GLFWTest\dog.raw)");
+	GLuint catId = loadTexture("cat.raw");
+	GLuint dogId = loadTexture("dog.raw");
 
 	// ゲームループ
 	while (!glfwWindowShouldClose(window))
