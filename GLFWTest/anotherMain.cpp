@@ -24,6 +24,11 @@ public:
 		, y(b)
 	{
 	}
+
+	Vec2 operator*(float a)
+	{
+		return{ x * a, y * a };
+	}
 };
 
 static constexpr float PI = 3.14159265358f;
@@ -66,9 +71,10 @@ public:
 	Sprite() = default;
 	virtual ~Sprite() = default;
 
+	mat4x4 m, p, mvp;
+
 	void Draw(GLuint texId)
 	{
-		mat4x4 m, p, mvp;
 		mat4x4_identity(m);
 		mat4x4_translate_in_place(m, pos.x, pos.y, 0);
 		mat4x4_ortho(p, -ASPECT_RATIO, ASPECT_RATIO, -1.f, 1.f, 1.f, -1.f);
@@ -85,6 +91,7 @@ public:
 	}
 
 public:
+	Vec2 size{};
 	Vec2 pos{}; // ç¿ïW
 	Vec2 vertex[I]{}; // offset
 	Vec2 geom[I]{}; // é¿ç€ÇÃíl
@@ -102,6 +109,7 @@ public:
 		, mMoveVec{ sin(aDeg / 180.0f * PI), cos(aDeg / 180.0f * PI) }
 	{
 		SetVertex();
+		size = { aSize , aSize };
 	}
 
 	~Ball()
@@ -125,8 +133,8 @@ public:
 		pos.x += mMoveVec.x * mSpeed;
 		pos.y += mMoveVec.y * mSpeed;
 
-		const float XLimit = 0.8f;
-		const float YLimit = 0.6f;
+		const float XLimit = 0.9f;
+		const float YLimit = 0.55f;
 
 		// îΩéÀ
 		if (pos.x > XLimit - mSize)
@@ -154,6 +162,11 @@ public:
 		}
 	}
 
+	void SwitchX()
+	{
+		mMoveVec.x *= -1;
+	}
+
 private:
 	Vec2 mMoveVec;
 	float mDeg;
@@ -165,8 +178,8 @@ template<int VertsCount>
 class Bar : public Sprite<VertsCount>
 {
 public:
-	static constexpr float MOVE_SPEED = 0.03f;
-	static constexpr float Y_LIMIT = 1.0f;
+	static constexpr float MOVE_SPEED = 0.015f;
+	static constexpr float Y_LIMIT = 0.625f;
 
 public:
 	Bar(Vec2 aSize, Vec2 aPos)
@@ -180,6 +193,13 @@ public:
 		uv[2] = { 1, 1 };
 		uv[3] = { 0, 1 };
 		pos = aPos;
+		size = aSize * 0.5f;
+		// îΩâf
+		for (size_t i = 0; i < VertsCount; i++)
+		{
+			geom[i].x = pos.x + vertex[i].x;
+			geom[i].y = pos.y + vertex[i].y;
+		}
 	}
 
 	~Bar()
@@ -209,32 +229,69 @@ public:
 		{
 			pos.y = -Y_LIMIT + vertex[0].y;
 		}
+
+		// îΩâf
+		for (size_t i = 0; i < VertsCount; i++)
+		{
+			geom[i].x = pos.x + vertex[i].x;
+			geom[i].y = pos.y + vertex[i].y;
+		}
 	}
 
 private:
 
 };
 
-auto ball = std::make_unique<Ball<BALL_VERTS_COUNT>>(0.2f, 50.0f, 0.01f);
-auto bar0 = std::make_unique<Bar<BAR_VERTS_COUNT>>(BAR_SIZE, Vec2{ -1.f, 0.f });
-auto bar1 = std::make_unique<Bar<BAR_VERTS_COUNT>>(BAR_SIZE, Vec2{ +1.f, 0.f });
+auto ball = std::make_unique<Ball<BALL_VERTS_COUNT>>(0.1f, 50.0f, 0.01f);
+auto bar0 = std::make_unique<Bar<BAR_VERTS_COUNT>>(BAR_SIZE, Vec2{ -0.5f, 0.f });
+auto bar1 = std::make_unique<Bar<BAR_VERTS_COUNT>>(BAR_SIZE, Vec2{ +0.5f, 0.f });
 
 
-bool IsCollidingSqSq(Vec2 a[BAR_VERTS_COUNT], Vec2 b[BAR_VERTS_COUNT])
+template<int IA, int IB>
+bool IsCollidingSqSq(Sprite<IA> a, Sprite<IB> b)
 {
-	//if (a.x - a.width / 2 > b.x - b.width / 2 - a.width)
+	//if (a.pos.x - a.size.x / 2 > b.pos.x - b.size.x / 2 - a.size.x)
 	//{
-	//	if (a.x - a.width / 2 < b.x + b.width / 2)
+	//	if (a.pos.x - a.size.x / 2 < b.pos.x + b.size.x / 2)
 	//	{
-	//		if (a.y - a.height / 2 > b.y - b.height / 2 - a.height)
+	//		if (a.pos.y - a.size.y / 2 > b.pos.y - b.size.y / 2 - a.size.y)
 	//		{
-	//			if (a.y - a.height / 2 < b.y + b.height / 2)
+	//			if (a.pos.y - a.size.y / 2 < b.pos.y + b.size.y / 2)
 	//			{
 	//				return true;
 	//			}
 	//		}
 	//	}
 	//}
+
+	//if (a.pos.x - a.size.x / 2 > b.pos.x - b.size.x / 2 - a.size.x)
+	//{
+	//	if (a.pos.x + a.size.x / 2 < b.pos.x + b.size.x / 2 + a.size.x)
+	//	{
+	//		if (a.pos.y - a.size.y / 2 > b.pos.y - b.size.y / 2 - a.size.y)
+	//		{
+	//			if (a.pos.y + a.size.y / 2 < b.pos.y + b.size.y / 2 + a.size.y)
+	//			{
+	//				return true;
+	//			}
+	//		}
+	//	}
+	//}
+
+	if (b.pos.x + b.size.x / 2 > a.pos.x - a.size.x / 2)
+	{
+		if (b.pos.x - b.size.x / 2 < a.pos.x + a.size.x / 2)
+		{
+			if (b.pos.y + b.size.y / 2 > a.pos.y - a.size.y / 2)
+			{
+				if (b.pos.y - b.size.y / 2 < a.pos.y + a.size.y / 2)
+				{
+					return true;
+				}
+			}
+		}
+	}
+
 
 	return false;
 }
@@ -370,6 +427,14 @@ int main()
 		}
 
 		ball->Move();
+		if (IsCollidingSqSq(*ball, *bar0))
+		{
+			ball->SwitchX();
+		}
+		if (IsCollidingSqSq(*ball, *bar1))
+		{
+			ball->SwitchX();
+		}
 
 		// -- ï`âÊ -- 
 		// âÊñ ÇÃèâä˙âª
