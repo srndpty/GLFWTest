@@ -11,7 +11,7 @@
 #undef min
 #undef max
 
-using namespace std;
+//using namespace std;
 struct Vec2
 {
 	float x, y;
@@ -34,7 +34,7 @@ public:
 static constexpr float PI = 3.14159265358f;
 static Vec2 WINDOW_SIZE = { 640.f, 480.f };
 static float ASPECT_RATIO = WINDOW_SIZE.x / WINDOW_SIZE.y;
-static Vec2 BAR_SIZE = { 0.1f, 0.5f };
+static Vec2 BAR_SIZE = { 0.5f, 0.5f };
 static constexpr int BALL_VERTS_COUNT = 32;
 static constexpr int BAR_VERTS_COUNT = 4;
 
@@ -97,6 +97,27 @@ public:
 	Vec2 geom[I]{}; // 実際の値
 	Vec2 uv[I]{}; // uv
 };
+
+class NumTex : public Sprite<4>
+{
+public:
+	NumTex()
+	{
+	}
+
+	~NumTex()
+	{
+	}
+
+	void Update(int aNum)
+	{
+		mNum = aNum;
+	}
+
+private:
+	int mNum;
+};
+
 
 template<int VertsCount>
 class Ball : public Sprite<VertsCount>
@@ -188,10 +209,10 @@ public:
 		vertex[1] = geom[1] = { +aSize.x / 2, +aSize.y / 2 };
 		vertex[2] = geom[2] = { +aSize.x / 2, -aSize.y / 2 };
 		vertex[3] = geom[3] = { -aSize.x / 2, -aSize.y / 2 };
-		uv[0] = { 0, 0 };
-		uv[1] = { 1, 0 };
-		uv[2] = { 1, 1 };
-		uv[3] = { 0, 1 };
+		uv[0] = { 0, 1 };
+		uv[1] = { 1, 1 };
+		uv[2] = { 1, 0 };
+		uv[3] = { 0, 0 };
 		pos = aPos;
 		size = aSize * 0.5f;
 		// 反映
@@ -267,11 +288,11 @@ bool IsCollidingSqSq(Sprite<IA> a, Sprite<IB> b)
 	return false;
 }
 
-GLuint loadTexture(const char* filename)
+GLuint loadTexture(const char* filename, int width, int height)
 {
 	// テクスチャIDの生成
-	GLuint catId;
-	glGenTextures(1, &catId);
+	GLuint id;
+	glGenTextures(1, &id);
 
 	// ファイルの読み込み
 	std::ifstream fstr(filename, std::ios::binary);
@@ -292,8 +313,8 @@ GLuint loadTexture(const char* filename)
 
 	// テクスチャをGPUに転送
 	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-	glBindTexture(GL_TEXTURE_2D, catId);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 256, 256, 0, GL_RGB, GL_UNSIGNED_BYTE, textureBuffer);
+	glBindTexture(GL_TEXTURE_2D, id);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, textureBuffer);
 
 	// テクスチャの設定
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
@@ -305,7 +326,64 @@ GLuint loadTexture(const char* filename)
 	delete[] textureBuffer;
 	glBindTexture(GL_TEXTURE_2D, 0);
 
-	return catId;
+	return id;
+}
+
+GLuint loadBmp(const char* filename)
+{
+	static constexpr int bmpHeaderSize = 54;
+	char header[bmpHeaderSize];
+	// テクスチャIDの生成
+	GLuint id;
+	glGenTextures(1, &id);
+
+	// ファイルの読み込み
+	std::ifstream fstr(filename, std::ios::binary);
+	if (!fstr)
+	{
+		std::cout << "Failed to load " << filename << "\n";
+		return -1;
+	}
+
+	fstr.read(header, bmpHeaderSize);
+	if (header[0] != 'B' || header[1] != 'M')
+	{
+		printf("Not a correct BMP file\n");
+		return 0;
+	}
+	int dataPos = *(int*)&(header[0x0A]);
+	int imageSize = *(int*)&(header[0x22]);
+	int width = *(int*)&(header[0x12]);
+	int height = *(int*)&(header[0x16]);
+	if (imageSize == 0)    imageSize = width*height * 3; // 3 : one byte for each Red, Green and Blue component
+	if (dataPos == 0)      dataPos = 54; // The BMP header is done that way
+
+
+	const size_t fileSize = static_cast<size_t>(fstr.seekg(0, fstr.end).tellg());
+	fstr.seekg(0, fstr.beg);
+	if (fileSize >= std::numeric_limits<size_t>::max())
+	{
+		std::cout << "Failed to get filesize that must be less than size_t max";
+	}
+	char* textureBuffer = new char[fileSize];
+	fstr.read(textureBuffer, fileSize);
+
+	// テクスチャをGPUに転送
+	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+	glBindTexture(GL_TEXTURE_2D, id);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_BGR, GL_UNSIGNED_BYTE, textureBuffer + bmpHeaderSize);
+
+	// テクスチャの設定
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+
+	// テクスチャのアンバインド
+	delete[] textureBuffer;
+	glBindTexture(GL_TEXTURE_2D, 0);
+
+	return id;
 }
 
 // エラーコールバック
@@ -372,8 +450,11 @@ int main()
 	//GLuint programId = CreateShader();
 	shader.SetUp();
 
-	GLuint catId = loadTexture("cat.raw");
-	GLuint dogId = loadTexture("dog.raw");
+	GLuint catId = loadTexture("cat.raw", 256, 256);
+	GLuint dogId = loadTexture("dog.raw", 256, 256);
+	GLuint numId = loadBmp("num.bmp");
+
+	int leftPoint = 0, rightPoint = 0;
 
 	// ゲームループ
 	while (!glfwWindowShouldClose(window))
@@ -403,10 +484,12 @@ int main()
 		const float X_LIMIT = 0.8f;
 		if (ball->pos.x > +X_LIMIT)
 		{
+			leftPoint++;
 			ball->pos.x = 0;
 		}
 		else if (ball->pos.x < -X_LIMIT)
 		{
+			rightPoint++;
 			ball->pos.x = 0;
 		}
 
@@ -430,7 +513,7 @@ int main()
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		glClearDepth(1.0);
 
-		bar0->Draw(catId);
+		bar0->Draw(numId);
 		bar1->Draw(catId);
 		ball->Draw(dogId);
 
