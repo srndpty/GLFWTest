@@ -35,6 +35,7 @@ static constexpr float PI = 3.14159265358f;
 static Vec2 WINDOW_SIZE = { 640.f, 480.f };
 static float ASPECT_RATIO = WINDOW_SIZE.x / WINDOW_SIZE.y;
 static Vec2 BAR_SIZE = { 0.1f, 0.5f };
+static Vec2 NUM_SIZE = { 0.15f, 0.15f };
 static constexpr int BALL_VERTS_COUNT = 32;
 static constexpr int BAR_VERTS_COUNT = 4;
 
@@ -98,11 +99,26 @@ public:
 	Vec2 uv[I]{}; // uv
 };
 
-class NumTex : public Sprite<4>
+template<int VertsCount = 4>
+class NumTex : public Sprite<VertsCount>
 {
 public:
-	NumTex()
+	NumTex(Vec2 aSize, Vec2 aPos)
 	{
+		static_assert(VertsCount == 4, "VertsCount == 4");
+		vertex[0] = geom[0] = { -aSize.x / 2, +aSize.y / 2 };
+		vertex[1] = geom[1] = { +aSize.x / 2, +aSize.y / 2 };
+		vertex[2] = geom[2] = { +aSize.x / 2, -aSize.y / 2 };
+		vertex[3] = geom[3] = { -aSize.x / 2, -aSize.y / 2 };
+		RefreshUv(0);
+		pos = aPos;
+		size = aSize * 0.5f;
+		// ”½‰f
+		for (size_t i = 0; i < VertsCount; i++)
+		{
+			geom[i].x = pos.x + vertex[i].x;
+			geom[i].y = pos.y + vertex[i].y;
+		}
 	}
 
 	~NumTex()
@@ -112,6 +128,15 @@ public:
 	void Update(int aNum)
 	{
 		mNum = aNum;
+		RefreshUv(aNum);
+	}
+
+	void RefreshUv(int index)
+	{
+		uv[0] = { index       / 10.f, 1 };
+		uv[1] = { (index + 1) / 10.f, 1 };
+		uv[2] = { (index + 1) / 10.f, 0 };
+		uv[3] = { index       / 10.f, 0 };
 	}
 
 private:
@@ -158,13 +183,14 @@ public:
 		const float YLimit = 0.55f;
 
 		// ”½ŽË
+		// X‚ÍƒS[ƒ‹”»’è‚ÉŽg‚¤‚Ì‚Å”½“]‚µ‚È‚¢
 		if (pos.x > XLimit - mSize)
 		{
-			mMoveVec.x *= -1;
+			//mMoveVec.x *= -1;
 		}
 		else if (pos.x < -XLimit + mSize)
 		{
-			mMoveVec.x *= -1;
+			//mMoveVec.x *= -1;
 		}
 		if (pos.y > YLimit - mSize)
 		{
@@ -266,7 +292,8 @@ private:
 auto ball = std::make_unique<Ball<BALL_VERTS_COUNT>>(0.15f, 50.0f, 0.01f);
 auto bar0 = std::make_unique<Bar<BAR_VERTS_COUNT>>(BAR_SIZE, Vec2{ -0.5f, 0.f });
 auto bar1 = std::make_unique<Bar<BAR_VERTS_COUNT>>(BAR_SIZE, Vec2{ +0.5f, 0.f });
-
+auto leftScore = std::make_unique<NumTex<>>(NUM_SIZE, Vec2{ -0.5f, 0.4f });
+auto rightScore = std::make_unique<NumTex<>>(NUM_SIZE, Vec2{ +0.5f, 0.4f });
 
 template<int IA, int IB>
 bool IsCollidingSqSq(Sprite<IA> a, Sprite<IB> b)
@@ -288,7 +315,7 @@ bool IsCollidingSqSq(Sprite<IA> a, Sprite<IB> b)
 	return false;
 }
 
-GLuint loadBmp(const char* filename)
+GLuint LoadBmp(const char* filename)
 {
 	static constexpr int bmpHeaderSize = 54;
 	char header[bmpHeaderSize];
@@ -409,9 +436,9 @@ int main()
 	//GLuint programId = CreateShader();
 	shader.SetUp();
 
-	GLuint barId = loadBmp("wood.bmp");
-	GLuint ballId = loadBmp("ball.bmp");
-	GLuint numId = loadBmp("num.bmp");
+	GLuint barId = LoadBmp("wood.bmp");
+	GLuint ballId = LoadBmp("ball.bmp");
+	GLuint numId = LoadBmp("num.bmp");
 
 	int leftPoint = 0, rightPoint = 0;
 
@@ -444,12 +471,16 @@ int main()
 		if (ball->pos.x > +X_LIMIT)
 		{
 			leftPoint++;
+			leftScore->Update(leftPoint);
 			ball->pos.x = 0;
+			ball->SwitchX();
 		}
 		else if (ball->pos.x < -X_LIMIT)
 		{
 			rightPoint++;
+			rightScore->Update(rightPoint);
 			ball->pos.x = 0;
+			ball->SwitchX();
 		}
 
 		ball->Move();
@@ -475,6 +506,8 @@ int main()
 		bar0->Draw(barId);
 		bar1->Draw(barId);
 		ball->Draw(ballId);
+		leftScore->Draw(numId);
+		rightScore->Draw(numId);
 
 		glfwSwapBuffers(window);
 		glfwPollEvents();
