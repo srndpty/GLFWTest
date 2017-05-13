@@ -81,6 +81,7 @@ public:
 		mat4x4_ortho(p, -ASPECT_RATIO, ASPECT_RATIO, -1.f, 1.f, 1.f, -1.f);
 		mat4x4_mul(mvp, p, m);
 
+		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 		glUniformMatrix4fv(shader.mMvpLocation, 1, false, (const GLfloat*)mvp);
 		// attributeëÆê´Çìoò^
 		glVertexAttribPointer(shader.mPositionLocation, 2, GL_FLOAT, false, 0, geom);

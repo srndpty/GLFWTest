@@ -24,14 +24,14 @@ void Shader::SetUp()
 	auto vShaderId = glCreateShader(GL_VERTEX_SHADER);
 	std::string vertexShader = R"#(
 	uniform mat4 MVP;
-    attribute vec3 position;
-    attribute vec2 uv;
-    varying vec2 vuv;
-    void main(void){
-        gl_Position = MVP * vec4(position, 1.0);
-        vuv = uv;
-    }
-    )#";
+	attribute vec3 position;
+	attribute vec2 uv;
+	varying vec2 vuv;
+	void main(void){
+		gl_Position = MVP * vec4(position, 1.0);
+		vuv = uv;
+	}
+	)#";
 	const char* vs = vertexShader.c_str();
 	glShaderSource(vShaderId, 1, &vs, NULL);
 	glCompileShader(vShaderId);
@@ -39,12 +39,12 @@ void Shader::SetUp()
 	//フラグメントシェーダのコンパイル
 	GLuint fShaderId = glCreateShader(GL_FRAGMENT_SHADER);
 	std::string fragmentShader = R"#(
-    varying vec2 vuv;
-    uniform sampler2D texture;
-    void main(void){
-        gl_FragColor = texture2D(texture, vuv);
-    }
-    )#";
+	varying vec2 vuv;
+	uniform sampler2D texture;
+	void main(void){
+		gl_FragColor = texture2D(texture, vuv);
+	}
+	)#";
 	const char* fs = fragmentShader.c_str();
 	glShaderSource(fShaderId, 1, &fs, NULL);
 	glCompileShader(fShaderId);
