@@ -379,6 +379,7 @@ int main()
 	while (!glfwWindowShouldClose(window))
 	{
 		// -- 計算 --
+		// バーの移動
 		if (input.mKeyStates[GLFW_KEY_W].pressed)
 		{
 			bar0->MoveUp();
@@ -397,7 +398,20 @@ int main()
 			bar1->MoveDown();
 		}
 
+		// ボールの移動
+		// 座標のgeomへの適用を必ず最後に
+		const float X_LIMIT = 0.8f;
+		if (ball->pos.x > +X_LIMIT)
+		{
+			ball->pos.x = 0;
+		}
+		else if (ball->pos.x < -X_LIMIT)
+		{
+			ball->pos.x = 0;
+		}
+
 		ball->Move();
+		// あたり判定
 		if (IsCollidingSqSq(*ball, *bar0))
 		{
 			ball->SwitchX();
@@ -408,6 +422,7 @@ int main()
 			ball->SwitchX();
 			ball->pos.x = bar1->pos.x - bar1->size.x / 2 - ball->size.x / 2;
 		}
+
 
 		// -- 描画 -- 
 		// 画面の初期化
