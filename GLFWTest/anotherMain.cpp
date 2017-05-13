@@ -34,7 +34,7 @@ public:
 static constexpr float PI = 3.14159265358f;
 static Vec2 WINDOW_SIZE = { 640.f, 480.f };
 static float ASPECT_RATIO = WINDOW_SIZE.x / WINDOW_SIZE.y;
-static Vec2 BAR_SIZE = { 0.5f, 0.5f };
+static Vec2 BAR_SIZE = { 0.1f, 0.5f };
 static constexpr int BALL_VERTS_COUNT = 32;
 static constexpr int BAR_VERTS_COUNT = 4;
 
@@ -144,7 +144,7 @@ public:
 			vertex[i].x = cos((float)i / VertsCount * PI * 2) * mSize;
 			vertex[i].y = sin((float)i / VertsCount * PI * 2) * mSize;
 			uv[i].x = cos((float)i / VertsCount  * PI * 2) * 0.5f + 0.5f;
-			uv[i].y = 1 - sin((float)i / VertsCount  * PI * 2) * 0.5f + 0.5f;
+			uv[i].y = sin((float)i / VertsCount  * PI * 2) * 0.5f + 0.5f;
 		}
 	}
 
@@ -263,7 +263,7 @@ private:
 
 };
 
-auto ball = std::make_unique<Ball<BALL_VERTS_COUNT>>(0.1f, 50.0f, 0.01f);
+auto ball = std::make_unique<Ball<BALL_VERTS_COUNT>>(0.15f, 50.0f, 0.01f);
 auto bar0 = std::make_unique<Bar<BAR_VERTS_COUNT>>(BAR_SIZE, Vec2{ -0.5f, 0.f });
 auto bar1 = std::make_unique<Bar<BAR_VERTS_COUNT>>(BAR_SIZE, Vec2{ +0.5f, 0.f });
 
@@ -286,47 +286,6 @@ bool IsCollidingSqSq(Sprite<IA> a, Sprite<IB> b)
 	}
 
 	return false;
-}
-
-GLuint loadTexture(const char* filename, int width, int height)
-{
-	// テクスチャIDの生成
-	GLuint id;
-	glGenTextures(1, &id);
-
-	// ファイルの読み込み
-	std::ifstream fstr(filename, std::ios::binary);
-	if (!fstr)
-	{
-		std::cout << "Failed to load " << filename << "\n";
-		return -1;
-	}
-
-	const size_t fileSize = static_cast<size_t>(fstr.seekg(0, fstr.end).tellg());
-	fstr.seekg(0, fstr.beg);
-	if (fileSize >= std::numeric_limits<size_t>::max())
-	{
-		std::cout << "Failed to get filesize that must be less than size_t max";
-	}
-	char* textureBuffer = new char[fileSize];
-	fstr.read(textureBuffer, fileSize);
-
-	// テクスチャをGPUに転送
-	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-	glBindTexture(GL_TEXTURE_2D, id);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, textureBuffer);
-
-	// テクスチャの設定
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-
-	// テクスチャのアンバインド
-	delete[] textureBuffer;
-	glBindTexture(GL_TEXTURE_2D, 0);
-
-	return id;
 }
 
 GLuint loadBmp(const char* filename)
@@ -450,8 +409,8 @@ int main()
 	//GLuint programId = CreateShader();
 	shader.SetUp();
 
-	GLuint catId = loadTexture("cat.raw", 256, 256);
-	GLuint dogId = loadTexture("dog.raw", 256, 256);
+	GLuint barId = loadBmp("wood.bmp");
+	GLuint ballId = loadBmp("ball.bmp");
 	GLuint numId = loadBmp("num.bmp");
 
 	int leftPoint = 0, rightPoint = 0;
@@ -513,9 +472,9 @@ int main()
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		glClearDepth(1.0);
 
-		bar0->Draw(numId);
-		bar1->Draw(catId);
-		ball->Draw(dogId);
+		bar0->Draw(barId);
+		bar1->Draw(barId);
+		ball->Draw(ballId);
 
 		glfwSwapBuffers(window);
 		glfwPollEvents();
