@@ -250,34 +250,6 @@ auto bar1 = std::make_unique<Bar<BAR_VERTS_COUNT>>(BAR_SIZE, Vec2{ +0.5f, 0.f })
 template<int IA, int IB>
 bool IsCollidingSqSq(Sprite<IA> a, Sprite<IB> b)
 {
-	//if (a.pos.x - a.size.x / 2 > b.pos.x - b.size.x / 2 - a.size.x)
-	//{
-	//	if (a.pos.x - a.size.x / 2 < b.pos.x + b.size.x / 2)
-	//	{
-	//		if (a.pos.y - a.size.y / 2 > b.pos.y - b.size.y / 2 - a.size.y)
-	//		{
-	//			if (a.pos.y - a.size.y / 2 < b.pos.y + b.size.y / 2)
-	//			{
-	//				return true;
-	//			}
-	//		}
-	//	}
-	//}
-
-	//if (a.pos.x - a.size.x / 2 > b.pos.x - b.size.x / 2 - a.size.x)
-	//{
-	//	if (a.pos.x + a.size.x / 2 < b.pos.x + b.size.x / 2 + a.size.x)
-	//	{
-	//		if (a.pos.y - a.size.y / 2 > b.pos.y - b.size.y / 2 - a.size.y)
-	//		{
-	//			if (a.pos.y + a.size.y / 2 < b.pos.y + b.size.y / 2 + a.size.y)
-	//			{
-	//				return true;
-	//			}
-	//		}
-	//	}
-	//}
-
 	if (b.pos.x + b.size.x / 2 > a.pos.x - a.size.x / 2)
 	{
 		if (b.pos.x - b.size.x / 2 < a.pos.x + a.size.x / 2)
@@ -291,7 +263,6 @@ bool IsCollidingSqSq(Sprite<IA> a, Sprite<IB> b)
 			}
 		}
 	}
-
 
 	return false;
 }
@@ -430,10 +401,12 @@ int main()
 		if (IsCollidingSqSq(*ball, *bar0))
 		{
 			ball->SwitchX();
+			ball->pos.x = bar0->pos.x + bar0->size.x / 2 + ball->size.x / 2;
 		}
 		if (IsCollidingSqSq(*ball, *bar1))
 		{
 			ball->SwitchX();
+			ball->pos.x = bar1->pos.x - bar1->size.x / 2 - ball->size.x / 2;
 		}
 
 		// -- •`‰æ -- 
